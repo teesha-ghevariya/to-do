@@ -1,0 +1,48 @@
+.node-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  transition: background-color 0.2s;
+}
+
+.node-item:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.bullet {
+  margin-right: 8px;
+  color: #666;
+  font-size: 12px;
+  user-select: none;
+  transition: transform 0.2s;
+}
+
+.bullet:first-child {
+  cursor: pointer;
+}
+
+.node-input {
+  flex: 1;
+  border: 1px solid transparent;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  padding: 6px 8px;
+  min-width: 0;
+  border-radius: 4px;
+  cursor: text;
+}
+
+.node-input:hover {
+  border-color: rgba(63, 81, 181, 0.2);
+}
+
+.node-input.editing {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.node-input:focus {
+  background-color: rgba(63, 81, 181, 0.1);
+}
+

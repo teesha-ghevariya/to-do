@@ -1,0 +1,17 @@
+<div class="node-item" [style.padding-left.px]="depth * 20">
+  <span class="bullet" *ngIf="hasChildren">▼</span>
+  <span class="bullet" *ngIf="!hasChildren">•</span>
+  
+  <input
+    #inputElement
+    type="text"
+    [(ngModel)]="editContent"
+    (focus)="onFocus()"
+    (blur)="onBlur()"
+    (keydown)="onKeyDown($event)"
+    class="node-input"
+    [class.editing]="isEditing"
+    placeholder="Add a task..."
+  />
+</div>
+

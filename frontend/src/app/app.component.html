@@ -1,0 +1,20 @@
+<div class="app-container">
+  <h1>To-Do App</h1>
+  <p class="subtitle">Create tasks, edit inline, and use keyboard shortcuts</p>
+  
+  <div class="shortcuts-info">
+    <strong>Shortcuts:</strong> Enter (new task), Tab (indent), Shift+Tab (outdent), 
+    Delete (remove), Ctrl+Up/Down (move), Ctrl+Z (undo)
+  </div>
+  
+  <div *ngIf="isEmpty" class="empty-state">
+    <p>No tasks yet. Start by adding your first task!</p>
+    <button mat-raised-button color="primary" (click)="createFirstNode()">
+      Create First Task
+    </button>
+  </div>
+  
+  <div *ngIf="!isEmpty" class="tree-container">
+    <app-node-tree [parentId]="null" [depth]="0" />
+  </div>
+</div>

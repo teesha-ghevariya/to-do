@@ -1,0 +1,23 @@
+<div class="node-tree">
+  <div *ngFor="let treeNode of nodes" class="node-wrapper">
+    <app-node-item
+      [node]="treeNode.node"
+      [depth]="depth"
+      [hasChildren]="hasChildren(treeNode.node)"
+      (contentChange)="onContentChange(treeNode.node, $event)"
+      (delete)="onDelete(treeNode.node)"
+      (createSibling)="onCreateSibling(treeNode.node)"
+      (indent)="onIndent(treeNode.node)"
+      (outdent)="onOutdent(treeNode.node)"
+      (moveUp)="onMoveUp(treeNode.node)"
+      (moveDown)="onMoveDown(treeNode.node)"
+    />
+    
+    <app-node-tree
+      *ngIf="treeNode.children && treeNode.children.length > 0"
+      [parentId]="treeNode.node.id"
+      [depth]="depth + 1"
+    />
+  </div>
+</div>
+

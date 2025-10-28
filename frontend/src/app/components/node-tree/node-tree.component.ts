@@ -425,15 +425,21 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
   }
 
   onToggleCompleted(node: Node, isCompleted: boolean): void {
-    // Update the node itself in state first for immediate UI feedback
+    // Create an updated node with the new completion status
     const updated = { ...node, isCompleted };
-    this.stateService.updateNode(updated);
-
-    // Cascade completion status to all descendants in state
+    
+    // Update both the node and its children in a batch
+    const allNodesToUpdate = [updated];
+    
+    // Collect all descendants and add them to the update batch
     const descendants = this.collectDescendants(node.id);
     descendants.forEach(child => {
-      const childUpdated = { ...child, isCompleted };
-      this.stateService.updateNode(childUpdated);
+      allNodesToUpdate.push({ ...child, isCompleted });
+    });
+    
+    // Update all nodes in state for immediate UI feedback
+    allNodesToUpdate.forEach(nodeToUpdate => {
+      this.stateService.updateNode(nodeToUpdate);
     });
 
     // Update in backend
@@ -444,15 +450,11 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Failed to toggle completed status:', error);
-        // Revert state change on error
-        const revertedNode = { ...node, isCompleted: !isCompleted };
-        this.stateService.updateNode(revertedNode);
-        // Revert descendants too
-        descendants.forEach(child => {
-          const childReverted = { ...child, isCompleted: !isCompleted };
-          this.stateService.updateNode(childReverted);
+        // Revert all changes on error
+        allNodesToUpdate.forEach(nodeToUpdate => {
+          const revertedNode = { ...nodeToUpdate, isCompleted: !isCompleted };
+          this.stateService.updateNode(revertedNode);
         });
-        // Could show user-friendly error message here
       }
     });
   }

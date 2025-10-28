@@ -16,7 +16,7 @@
 
 .node-content {
   display: flex;
-  align-items: flex-start;
+  align-items: center; /* Changed from flex-start to center for better checkbox alignment */
   width: 100%;
   min-height: 24px;
 }
@@ -148,7 +148,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-left: 10px;
+  margin-right: 10px;
   transition: all 0.2s ease;
   flex-shrink: 0;
 }

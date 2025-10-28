@@ -27,6 +27,16 @@
     <span *ngIf="!hasChildren" class="bullet bullet-dot">•</span>
 
     <div class="input-container">
+      <!-- Completion checkbox -->
+      <button 
+        class="completion-checkbox" 
+        [class.completed]="isCompleted"
+        (click)="toggleCompletion()"
+        *ngIf="editContent.trim()"
+      >
+        <span class="checkmark" *ngIf="isCompleted">✓</span>
+      </button>
+
       <div class="content-wrapper">
         <input
           #inputElement
@@ -51,16 +61,6 @@
           </span>
         </div>
       </div>
-      
-      <!-- Completion checkbox -->
-      <button 
-        class="completion-checkbox" 
-        [class.completed]="isCompleted"
-        (click)="toggleCompletion()"
-        *ngIf="editContent.trim()"
-      >
-        <span class="checkmark" *ngIf="isCompleted">✓</span>
-      </button>
     </div>
   </div>
 </div>

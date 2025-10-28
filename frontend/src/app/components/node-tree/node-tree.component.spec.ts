@@ -43,6 +43,16 @@ describe('NodeTreeComponent', () => {
     component['buildTree']();
     expect(component.nodes.length).toBeGreaterThan(0);
   });
+
+  it('should cascade completion to descendants', () => {
+    // root has child id 2
+    const root = state.getAllNodes().find((n: any) => n.id === 1);
+    component.onToggleCompleted(root, true);
+    const nodes = state.getAllNodes();
+    const child = nodes.find((n: any) => n.id === 2);
+    expect(root.isCompleted).toBeTrue();
+    expect(child.isCompleted).toBeTrue();
+  });
 });
 
 

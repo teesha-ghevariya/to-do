@@ -14,6 +14,7 @@
       (moveUp)="onMoveUp(treeNode.node)"
       (moveDown)="onMoveDown(treeNode.node)"
       (toggleExpanded)="onToggleExpanded(treeNode.node)"
+      (toggleCompleted)="onToggleCompleted(treeNode.node, $event)"
       (zoomIn)="onZoomIn(treeNode.node)"
       (dragStart)="onDragStart(treeNode.node)"
       (dragEnd)="onDragEnd()"

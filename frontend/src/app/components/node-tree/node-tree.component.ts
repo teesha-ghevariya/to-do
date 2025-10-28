@@ -324,6 +324,28 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
     this.stateService.updateNode(updatedNode);
   }
 
+  onToggleCompleted(node: Node, isCompleted: boolean): void {
+    // Update the node itself
+    const updated = { ...node, isCompleted };
+    this.stateService.updateNode(updated);
+
+    // Cascade completion status to all descendants
+    const descendants = this.collectDescendants(node.id);
+    descendants.forEach(child => {
+      const childUpdated = { ...child, isCompleted };
+      this.stateService.updateNode(childUpdated);
+    });
+  }
+
+  private collectDescendants(parentId: number): Node[] {
+    const result: Node[] = [];
+    const children = this.allNodes.filter(n => n.parentId === parentId);
+    children.forEach(c => {
+      result.push(c, ...this.collectDescendants(c.id));
+    });
+    return result;
+  }
+
   onDragStart(node: Node): void {
     this.draggedNode = node;
   }

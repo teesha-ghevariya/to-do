@@ -11,6 +11,21 @@
   (drop)="onDrop($event)"
 >
   <div class="node-content">
+    <!-- Expand/Collapse arrow on the left side -->
+    <span 
+      *ngIf="hasChildren"
+      class="bullet" 
+      [class.has-children]="hasChildren" 
+      [class.expanded]="isExpanded" 
+      (click)="onBulletClick()"
+      title="Toggle children"
+    >
+      <span class="bullet-icon">{{ isExpanded ? '▾' : '▸' }}</span>
+    </span>
+
+    <!-- Dot when no children -->
+    <span *ngIf="!hasChildren" class="bullet bullet-dot">•</span>
+
     <div class="input-container">
       <div class="content-wrapper">
         <input
@@ -36,17 +51,6 @@
           </span>
         </div>
       </div>
-      
-      <!-- Expand/Collapse arrow on the right side (only when node has children) -->
-      <span 
-        *ngIf="hasChildren"
-        class="bullet" 
-        [class.has-children]="hasChildren" 
-        [class.expanded]="isExpanded" 
-        (click)="onBulletClick()"
-      >
-        <span class="bullet-icon">{{ isExpanded ? '▼' : '▶' }}</span>
-      </span>
       
       <!-- Completion checkbox -->
       <button 

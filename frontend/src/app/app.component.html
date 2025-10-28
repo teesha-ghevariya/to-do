@@ -1,8 +1,8 @@
-<div class="workflowy-app">
+<div class="nodeflow-app">
   <!-- Header -->
   <header class="app-header">
     <div class="header-content">
-      <h1 class="app-title">Workflowy Clone</h1>
+      <h1 class="app-title">NodeFlow</h1>
       
       <!-- Breadcrumb Navigation -->
       <div class="breadcrumb" *ngIf="isZoomed">
@@ -23,12 +23,8 @@
         <button class="btn btn-secondary" (click)="zoomOut()" *ngIf="isZoomed">
           Zoom Out
         </button>
-        <button class="btn btn-secondary" (click)="toggleFocusMode()" [class.active]="focusMode">
-          Focus Mode
-        </button>
-        <button class="btn btn-secondary" (click)="toggleShowCompleted()" [class.active]="!showCompleted">
-          {{ showCompleted ? 'Hide' : 'Show' }} Completed
-        </button>
+        
+        
         <button class="btn btn-secondary" (click)="toggleSearch()" [class.active]="showSearch">
           Search
         </button>
@@ -114,7 +110,7 @@
       
       <!-- Tree Container -->
       <div *ngIf="!isEmpty || searchQuery" class="tree-container">
-        <app-node-tree [parentId]="null" [depth]="0" [focusMode]="focusMode" [showCompleted]="showCompleted" />
+        <app-node-tree [parentId]="null" [depth]="0" />
       </div>
     </div>
   </main>

@@ -39,7 +39,6 @@ describe('NodeTreeComponent', () => {
   });
 
   it('should build tree and show child when expanded', () => {
-    component.focusMode = false;
     component['buildTree']();
     expect(component.nodes.length).toBeGreaterThan(0);
   });

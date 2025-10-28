@@ -26,8 +26,6 @@
       *ngIf="treeNode.children && treeNode.children.length > 0 && treeNode.node.isExpanded !== false"
       [parentId]="treeNode.node.id"
       [depth]="depth + 1"
-      [focusMode]="focusMode"
-      [showCompleted]="showCompleted"
     />
   </div>
 </div>

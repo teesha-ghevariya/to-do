@@ -19,7 +19,7 @@ export class ExportImportService {
   }
 
   exportToMarkdown(nodes: Node[]): string {
-    let markdown = '# Workflowy Export\n\n';
+    let markdown = '# NodeFlow Export\n\n';
     markdown += `Exported on: ${new Date().toLocaleDateString()}\n\n`;
     
     const rootNodes = nodes.filter(node => node.parentId === null);
@@ -47,7 +47,7 @@ export class ExportImportService {
   }
 
   exportToText(nodes: Node[]): string {
-    let text = 'Workflowy Export\n';
+    let text = 'NodeFlow Export\n';
     text += `Exported on: ${new Date().toLocaleDateString()}\n\n`;
     
     const rootNodes = nodes.filter(node => node.parentId === null);
@@ -168,8 +168,8 @@ export class ExportImportService {
     lines.forEach((line, index) => {
       const trimmedLine = line.trim();
       
-      // Skip empty lines and headers
-      if (!trimmedLine || trimmedLine.startsWith('Workflowy Export') || trimmedLine.startsWith('Exported on:')) {
+      // Skip empty lines and headers (support legacy and new export headers)
+      if (!trimmedLine || trimmedLine.startsWith('Workflowy Export') || trimmedLine.startsWith('NodeFlow Export') || trimmedLine.startsWith('Exported on:')) {
         return;
       }
 

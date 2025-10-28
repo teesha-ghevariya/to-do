@@ -1,6 +1,6 @@
-/* Workflowy Clone - App Component Styles */
+/* NodeFlow - App Component Styles */
 
-.workflowy-app {
+.nodeflow-app {
   height: 100vh;
   display: flex;
   flex-direction: column;

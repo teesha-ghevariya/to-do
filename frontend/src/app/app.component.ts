@@ -16,6 +16,7 @@ import { FormattingService } from './services/formatting.service';
 import { ViewSettingsService } from './services/view-settings.service';
 import { TagService } from './services/tag.service';
 import { ActionHistory, SearchResult, Node } from './models/node.model';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -25,17 +26,15 @@ import { ActionHistory, SearchResult, Node } from './models/node.model';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-  title = 'Workflowy Clone';
+  title = 'NodeFlow';
   isEmpty = true;
   showSearch = false;
   searchQuery = '';
-  focusMode = false;
   showShortcuts = false;
   searchResults: SearchResult[] = [];
   breadcrumbPath: string[] = [];
   isZoomed = false;
   showExportMenu = false;
-  showCompleted = true;
   showNotes = false;
   notesNode: Node | null = null;
   syncStatus: 'idle' | 'syncing' | 'error' = 'idle';
@@ -152,11 +151,42 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Load initial nodes from backend
-    this.nodeService.getRootNodes().subscribe(nodes => {
-      this.stateService.setNodes(nodes);
-      this.isEmpty = nodes.length === 0;
+    // Load all nodes from backend (root nodes and their children)
+    this.loadAllNodes();
+  }
+
+  private loadAllNodes(): void {
+    this.nodeService.getRootNodes().subscribe(rootNodes => {
+      if (rootNodes.length === 0) {
+        this.stateService.setNodes([]);
+        this.isEmpty = true;
+        return;
+      }
+
+      // Load all nodes including children recursively
+      this.loadNodesRecursively(rootNodes).then(allNodes => {
+        this.stateService.setNodes(allNodes);
+        this.isEmpty = allNodes.length === 0;
+      });
     });
+  }
+
+  private async loadNodesRecursively(nodes: Node[]): Promise<Node[]> {
+    const allNodes: Node[] = [...nodes];
+    
+    for (const node of nodes) {
+      try {
+        const children = await firstValueFrom(this.nodeService.getChildren(node.id));
+        if (children && children.length > 0) {
+          const childNodes = await this.loadNodesRecursively(children);
+          allNodes.push(...childNodes);
+        }
+      } catch (error) {
+        console.error(`Failed to load children for node ${node.id}:`, error);
+      }
+    }
+    
+    return allNodes;
   }
 
   createFirstNode(): void {
@@ -194,10 +224,6 @@ export class AppComponent implements OnInit {
     this.searchService.clearSearch();
   }
 
-  toggleFocusMode(): void {
-    this.focusMode = !this.focusMode;
-    // The focus mode filtering is handled by the node-tree component
-  }
 
   onNodeSelected(node: Node): void {
     this.zoomService.zoomIn(node);
@@ -229,40 +255,43 @@ export class AppComponent implements OnInit {
     const action = this.stateService.popFromUndoStack();
     if (!action) return;
 
-    const isTemporaryId = this.isTemporaryId(action.node.id);
-
     switch (action.type) {
       case 'create':
         this.stateService.removeNode(action.node.id);
-        // Only sync to backend if it's not a temporary ID
-        if (!isTemporaryId) {
-          this.syncService.queueOperation({
-            type: 'delete',
-            node: action.node
-          });
-        }
+        this.nodeService.deleteNode(action.node.id).subscribe({
+          error: (error) => {
+            console.error('Failed to undo create:', error);
+            // Revert state change on error
+            this.stateService.addNode(action.node);
+          }
+        });
         break;
       case 'delete':
         this.stateService.addNode(action.node);
-        // Only sync to backend if it's not a temporary ID
-        if (!isTemporaryId) {
-          this.syncService.queueOperation({
-            type: 'create',
-            node: action.node
-          });
-        }
+        this.nodeService.createNode(action.node).subscribe({
+          next: (createdNode) => {
+            // Update state with real ID from backend
+            this.stateService.removeNode(action.node.id);
+            this.stateService.addNode(createdNode);
+          },
+          error: (error) => {
+            console.error('Failed to undo delete:', error);
+            // Revert state change on error
+            this.stateService.removeNode(action.node.id);
+          }
+        });
         break;
       case 'update':
         if (action.previousState?.content) {
           const updatedNode = { ...action.node, content: action.previousState.content };
           this.stateService.updateNode(updatedNode);
-          if (!isTemporaryId) {
-            this.syncService.queueOperation({
-              type: 'update',
-              node: updatedNode,
-              previousState: action.previousState
-            });
-          }
+          this.nodeService.updateNode(action.node.id, updatedNode).subscribe({
+            error: (error) => {
+              console.error('Failed to undo update:', error);
+              // Revert state change on error
+              this.stateService.updateNode(action.node);
+            }
+          });
         }
         break;
       case 'move':
@@ -273,13 +302,13 @@ export class AppComponent implements OnInit {
             position: action.previousPosition 
           };
           this.stateService.updateNode(updatedNode);
-          if (!isTemporaryId) {
-            this.syncService.queueOperation({
-              type: 'move',
-              node: updatedNode,
-              previousState: action.previousState
-            });
-          }
+          this.nodeService.moveNode(action.node.id, action.previousParentId, action.previousPosition).subscribe({
+            error: (error) => {
+              console.error('Failed to undo move:', error);
+              // Revert state change on error
+              this.stateService.updateNode(action.node);
+            }
+          });
         }
         break;
     }
@@ -289,46 +318,61 @@ export class AppComponent implements OnInit {
     const action = this.stateService.popFromRedoStack();
     if (!action) return;
 
-    const isTemporaryId = this.isTemporaryId(action.node.id);
-
     switch (action.type) {
       case 'create':
         this.stateService.addNode(action.node);
-        if (!isTemporaryId) {
-          this.syncService.queueOperation({
-            type: 'create',
-            node: action.node
-          });
-        }
+        this.nodeService.createNode(action.node).subscribe({
+          next: (createdNode) => {
+            // Update state with real ID from backend
+            this.stateService.removeNode(action.node.id);
+            this.stateService.addNode(createdNode);
+          },
+          error: (error) => {
+            console.error('Failed to redo create:', error);
+            // Revert state change on error
+            this.stateService.removeNode(action.node.id);
+          }
+        });
         break;
       case 'delete':
         this.stateService.removeNode(action.node.id);
-        if (!isTemporaryId) {
-          this.syncService.queueOperation({
-            type: 'delete',
-            node: action.node
-          });
-        }
+        this.nodeService.deleteNode(action.node.id).subscribe({
+          error: (error) => {
+            console.error('Failed to redo delete:', error);
+            // Revert state change on error
+            this.stateService.addNode(action.node);
+          }
+        });
         break;
       case 'update':
         this.stateService.updateNode(action.node);
-        if (!isTemporaryId) {
-          this.syncService.queueOperation({
-            type: 'update',
-            node: action.node,
-            previousState: action.previousState
-          });
-        }
+        this.nodeService.updateNode(action.node.id, action.node).subscribe({
+          error: (error) => {
+            console.error('Failed to redo update:', error);
+            // Revert state change on error
+            if (action.previousState?.content) {
+              const revertedNode = { ...action.node, content: action.previousState.content };
+              this.stateService.updateNode(revertedNode);
+            }
+          }
+        });
         break;
       case 'move':
         this.stateService.updateNode(action.node);
-        if (!isTemporaryId) {
-          this.syncService.queueOperation({
-            type: 'move',
-            node: action.node,
-            previousState: action.previousState
-          });
-        }
+        this.nodeService.moveNode(action.node.id, action.node.parentId, action.node.position).subscribe({
+          error: (error) => {
+            console.error('Failed to redo move:', error);
+            // Revert state change on error
+            if (action.previousParentId !== undefined && action.previousPosition !== undefined) {
+              const revertedNode = { 
+                ...action.node, 
+                parentId: action.previousParentId, 
+                position: action.previousPosition 
+              };
+              this.stateService.updateNode(revertedNode);
+            }
+          }
+        });
         break;
     }
   }
@@ -367,13 +411,14 @@ export class AppComponent implements OnInit {
     selectedNodes.forEach(node => {
       this.stateService.removeNode(node.id);
       
-      // Only sync to backend if it's not a temporary ID
-      if (!this.isTemporaryId(node.id)) {
-        this.syncService.queueOperation({
-          type: 'delete',
-          node: node
-        });
-      }
+      // Delete from backend
+      this.nodeService.deleteNode(node.id).subscribe({
+        error: (error) => {
+          console.error('Failed to cut node:', error);
+          // Revert state change on error
+          this.stateService.addNode(node);
+        }
+      });
     });
   }
 
@@ -386,9 +431,17 @@ export class AppComponent implements OnInit {
     
     pastedNodes.forEach(node => {
       this.stateService.addNode(node);
-      this.syncService.queueOperation({
-        type: 'create',
-        node: node
+      this.nodeService.createNode(node).subscribe({
+        next: (createdNode) => {
+          // Update state with real ID from backend
+          this.stateService.removeNode(node.id);
+          this.stateService.addNode(createdNode);
+        },
+        error: (error) => {
+          console.error('Failed to paste node:', error);
+          // Revert state change on error
+          this.stateService.removeNode(node.id);
+        }
       });
     });
   }
@@ -417,9 +470,12 @@ export class AppComponent implements OnInit {
       if (node) {
         const updatedNode = { ...node, isStarred: !node.isStarred };
         this.stateService.updateNode(updatedNode);
-        this.syncService.queueOperation({
-          type: 'toggle-star',
-          node: updatedNode
+        this.nodeService.updateNode(node.id, updatedNode).subscribe({
+          error: (error) => {
+            console.error('Failed to toggle star:', error);
+            // Revert state change on error
+            this.stateService.updateNode(node);
+          }
         });
       }
     });
@@ -435,17 +491,17 @@ export class AppComponent implements OnInit {
     // Implementation depends on UI requirements
   }
 
-  toggleShowCompleted(): void {
-    this.showCompleted = !this.showCompleted;
-  }
 
   onNotesSave(notes: string): void {
     if (this.notesNode) {
       const updatedNode = { ...this.notesNode, notes };
       this.stateService.updateNode(updatedNode);
-      this.syncService.queueOperation({
-        type: 'update-notes',
-        node: updatedNode
+      this.nodeService.updateNode(this.notesNode.id, updatedNode).subscribe({
+        error: (error) => {
+          console.error('Failed to save notes:', error);
+          // Revert state change on error
+          this.stateService.updateNode(this.notesNode!);
+        }
       });
     }
   }
@@ -455,32 +511,26 @@ export class AppComponent implements OnInit {
     this.notesNode = null;
   }
 
-  // Helper function to check if a node ID is temporary
-  private isTemporaryId(nodeId: number): boolean {
-    const currentTime = Date.now();
-    const tempIdThreshold = currentTime - 60000; // 1 minute ago
-    return nodeId > tempIdThreshold;
-  }
 
   // Export/Import Methods
   exportToJSON(): void {
     const nodes = this.stateService.getAllNodes();
     const jsonContent = this.exportImportService.exportToJSON(nodes);
-    const filename = `workflowy-export-${new Date().toISOString().split('T')[0]}.json`;
+    const filename = `nodeflow-export-${new Date().toISOString().split('T')[0]}.json`;
     this.exportImportService.downloadFile(jsonContent, filename, 'application/json');
   }
 
   exportToMarkdown(): void {
     const nodes = this.stateService.getAllNodes();
     const markdownContent = this.exportImportService.exportToMarkdown(nodes);
-    const filename = `workflowy-export-${new Date().toISOString().split('T')[0]}.md`;
+    const filename = `nodeflow-export-${new Date().toISOString().split('T')[0]}.md`;
     this.exportImportService.downloadFile(markdownContent, filename, 'text/markdown');
   }
 
   exportToText(): void {
     const nodes = this.stateService.getAllNodes();
     const textContent = this.exportImportService.exportToText(nodes);
-    const filename = `workflowy-export-${new Date().toISOString().split('T')[0]}.txt`;
+    const filename = `nodeflow-export-${new Date().toISOString().split('T')[0]}.txt`;
     this.exportImportService.downloadFile(textContent, filename, 'text/plain');
   }
 

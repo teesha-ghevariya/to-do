@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Node } from '../../models/node.model';
 import { NodeItemComponent } from '../node-item/node-item.component';
 import { StateService } from '../../services/state.service';
+import { NodeService } from '../../services/node.service';
 import { ZoomService } from '../../services/zoom.service';
 import { Subscription } from 'rxjs';
 
@@ -21,15 +22,17 @@ interface TreeNode {
 export class NodeTreeComponent implements OnInit, OnDestroy {
   @Input() parentId: number | null = null;
   @Input() depth: number = 0;
-  @Input() focusMode: boolean = false;
-  @Input() showCompleted: boolean = true;
   
   nodes: TreeNode[] = [];
   private allNodes: Node[] = [];
   private subscription?: Subscription;
   private draggedNode: Node | null = null;
 
-  constructor(private stateService: StateService, private zoomService: ZoomService) {}
+  constructor(
+    private stateService: StateService, 
+    private nodeService: NodeService,
+    private zoomService: ZoomService
+  ) {}
 
   ngOnInit(): void {
     // Load initial state
@@ -68,15 +71,7 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
     // Sort nodes by position
     filteredNodes.sort((a, b) => a.position - b.position);
     
-    // Apply focus mode filtering
-    if (this.focusMode) {
-      filteredNodes = filteredNodes.filter(node => !node.isCompleted);
-    }
-    
-    // Apply completed items filtering
-    if (!this.showCompleted) {
-      filteredNodes = filteredNodes.filter(node => !node.isCompleted);
-    }
+    // No additional filtering; respect each node's completed state as-is
     
     this.nodes = filteredNodes.map(node => ({
       node,
@@ -90,15 +85,7 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
     // Sort children by position
     children.sort((a, b) => a.position - b.position);
     
-    // Apply focus mode filtering to children
-    if (this.focusMode) {
-      children = children.filter(node => !node.isCompleted);
-    }
-    
-    // Apply completed items filtering to children
-    if (!this.showCompleted) {
-      children = children.filter(node => !node.isCompleted);
-    }
+    // No additional filtering for children
     
     return children.map(node => ({
       node,
@@ -115,9 +102,24 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
     };
     this.stateService.addToUndoStack(historyItem);
 
-    // Update in state - this will trigger rebuild
+    // Update in state first for immediate UI feedback
     const updatedNode = { ...node, content: newContent };
     this.stateService.updateNode(updatedNode);
+
+    // Update in backend
+    this.nodeService.updateNode(node.id, updatedNode).subscribe({
+      next: (backendNode) => {
+        // Update state with backend response to ensure consistency
+        this.stateService.updateNode(backendNode);
+      },
+      error: (error) => {
+        console.error('Failed to update node content:', error);
+        // Revert state change on error
+        const revertedNode = { ...node, content: previousContent };
+        this.stateService.updateNode(revertedNode);
+        // Could show user-friendly error message here
+      }
+    });
   }
 
   onDelete(node: Node): void {
@@ -133,9 +135,25 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
       this.stateService.addToUndoStack(historyItem);
     });
 
-    // Remove all nodes from state
+    // Remove all nodes from state first for immediate UI feedback
     nodesToDelete.forEach(nodeToDelete => {
       this.stateService.removeNode(nodeToDelete.id);
+    });
+
+    // Delete from backend (only the root node, backend handles cascading)
+    this.nodeService.deleteNode(node.id).subscribe({
+      next: () => {
+        // Success - nodes already removed from state
+        console.log('Node and descendants deleted successfully');
+      },
+      error: (error) => {
+        console.error('Failed to delete node:', error);
+        // Revert state changes on error - add nodes back
+        nodesToDelete.forEach(nodeToDelete => {
+          this.stateService.addNode(nodeToDelete);
+        });
+        // Could show user-friendly error message here
+      }
     });
   }
 
@@ -157,23 +175,29 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
     
     // Calculate new position
     let newPosition = node.position + 1;
-    const newNode: Node = {
-      id: Date.now(), // Temporary ID until backend responds
+    const newNodeData: Partial<Node> = {
       content: '',
       parentId: node.parentId,
       position: newPosition,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
       isExpanded: true
     };
     
-    // Add to state immediately
-    this.stateService.addNode(newNode);
-    const historyItem = {
-      type: 'create' as const,
-      node: newNode
-    };
-    this.stateService.addToUndoStack(historyItem);
+    // Create node in backend first
+    this.nodeService.createNode(newNodeData).subscribe({
+      next: (createdNode) => {
+        // Add to state with real ID from backend
+        this.stateService.addNode(createdNode);
+        const historyItem = {
+          type: 'create' as const,
+          node: createdNode
+        };
+        this.stateService.addToUndoStack(historyItem);
+      },
+      error: (error) => {
+        console.error('Failed to create sibling node:', error);
+        // Could show user-friendly error message here
+      }
+    });
   }
 
   onCreateChild(node: Node): void {
@@ -181,13 +205,10 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
     const children = this.allNodes.filter(n => n.parentId === node.id);
     const newPosition = children.length;
     
-    const newNode: Node = {
-      id: Date.now(), // Temporary ID until backend responds
+    const newNodeData: Partial<Node> = {
       content: '',
       parentId: node.id,
       position: newPosition,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
       isExpanded: true
     };
     
@@ -195,13 +216,22 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
     const updatedParent = { ...node, isExpanded: true };
     this.stateService.updateNode(updatedParent);
     
-    // Add to state immediately
-    this.stateService.addNode(newNode);
-    const historyItem = {
-      type: 'create' as const,
-      node: newNode
-    };
-    this.stateService.addToUndoStack(historyItem);
+    // Create node in backend first
+    this.nodeService.createNode(newNodeData).subscribe({
+      next: (createdNode) => {
+        // Add to state with real ID from backend
+        this.stateService.addNode(createdNode);
+        const historyItem = {
+          type: 'create' as const,
+          node: createdNode
+        };
+        this.stateService.addToUndoStack(historyItem);
+      },
+      error: (error) => {
+        console.error('Failed to create child node:', error);
+        // Could show user-friendly error message here
+      }
+    });
   }
 
   onDuplicate(node: Node): void {
@@ -212,26 +242,32 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
     
     // Calculate new position
     let newPosition = node.position + 1;
-    const newNode: Node = {
-      id: Date.now(), // Temporary ID until backend responds
+    const newNodeData: Partial<Node> = {
       content: node.content, // Copy the content
       parentId: node.parentId,
       position: newPosition,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
       isCompleted: node.isCompleted,
       tags: node.tags ? [...node.tags] : undefined,
       notes: node.notes,
       isExpanded: true
     };
     
-    // Add to state immediately
-    this.stateService.addNode(newNode);
-    const historyItem = {
-      type: 'create' as const,
-      node: newNode
-    };
-    this.stateService.addToUndoStack(historyItem);
+    // Create node in backend first
+    this.nodeService.createNode(newNodeData).subscribe({
+      next: (createdNode) => {
+        // Add to state with real ID from backend
+        this.stateService.addNode(createdNode);
+        const historyItem = {
+          type: 'create' as const,
+          node: createdNode
+        };
+        this.stateService.addToUndoStack(historyItem);
+      },
+      error: (error) => {
+        console.error('Failed to duplicate node:', error);
+        // Could show user-friendly error message here
+      }
+    });
   }
 
   onIndent(node: Node): void {
@@ -252,9 +288,24 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
     
     const previousSibling = siblings[siblings.length - 1];
     
-    // Update in state
+    // Update in state first for immediate UI feedback
     const updatedNode = { ...node, parentId: previousSibling.id };
     this.stateService.updateNode(updatedNode);
+
+    // Update in backend
+    this.nodeService.moveNode(node.id, previousSibling.id, null).subscribe({
+      next: (backendNode) => {
+        // Update state with backend response to ensure consistency
+        this.stateService.updateNode(backendNode);
+      },
+      error: (error) => {
+        console.error('Failed to indent node:', error);
+        // Revert state change on error
+        const revertedNode = { ...node, parentId: node.parentId };
+        this.stateService.updateNode(revertedNode);
+        // Could show user-friendly error message here
+      }
+    });
   }
 
   onOutdent(node: Node): void {
@@ -271,9 +322,24 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
     const parent = this.allNodes.find(n => n.id === node.parentId);
     if (!parent) return;
     
-    // Update in state
+    // Update in state first for immediate UI feedback
     const updatedNode = { ...node, parentId: parent.parentId };
     this.stateService.updateNode(updatedNode);
+
+    // Update in backend
+    this.nodeService.moveNode(node.id, parent.parentId, null).subscribe({
+      next: (backendNode) => {
+        // Update state with backend response to ensure consistency
+        this.stateService.updateNode(backendNode);
+      },
+      error: (error) => {
+        console.error('Failed to outdent node:', error);
+        // Revert state change on error
+        const revertedNode = { ...node, parentId: node.parentId };
+        this.stateService.updateNode(revertedNode);
+        // Could show user-friendly error message here
+      }
+    });
   }
 
   onMoveUp(node: Node): void {
@@ -286,11 +352,28 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
     const targetSibling = siblings[siblings.length - 1];
     const newPosition = targetSibling.position;
     
-    // Update both nodes
+    // Update both nodes in state first for immediate UI feedback
     const updatedTarget = { ...targetSibling, position: node.position };
     const updatedNode = { ...node, position: newPosition };
     this.stateService.updateNode(updatedTarget);
     this.stateService.updateNode(updatedNode);
+
+    // Update in backend
+    this.nodeService.moveNode(node.id, node.parentId, newPosition).subscribe({
+      next: (backendNode) => {
+        // Update state with backend response to ensure consistency
+        this.stateService.updateNode(backendNode);
+      },
+      error: (error) => {
+        console.error('Failed to move node up:', error);
+        // Revert state changes on error
+        const revertedTarget = { ...targetSibling, position: targetSibling.position };
+        const revertedNode = { ...node, position: node.position };
+        this.stateService.updateNode(revertedTarget);
+        this.stateService.updateNode(revertedNode);
+        // Could show user-friendly error message here
+      }
+    });
   }
 
   onMoveDown(node: Node): void {
@@ -303,11 +386,28 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
     const targetSibling = siblings[0];
     const newPosition = targetSibling.position;
     
-    // Update both nodes
+    // Update both nodes in state first for immediate UI feedback
     const updatedTarget = { ...targetSibling, position: node.position };
     const updatedNode = { ...node, position: newPosition };
     this.stateService.updateNode(updatedTarget);
     this.stateService.updateNode(updatedNode);
+
+    // Update in backend
+    this.nodeService.moveNode(node.id, node.parentId, newPosition).subscribe({
+      next: (backendNode) => {
+        // Update state with backend response to ensure consistency
+        this.stateService.updateNode(backendNode);
+      },
+      error: (error) => {
+        console.error('Failed to move node down:', error);
+        // Revert state changes on error
+        const revertedTarget = { ...targetSibling, position: targetSibling.position };
+        const revertedNode = { ...node, position: node.position };
+        this.stateService.updateNode(revertedTarget);
+        this.stateService.updateNode(revertedNode);
+        // Could show user-friendly error message here
+      }
+    });
   }
 
   hasChildren(node: Node): boolean {
@@ -325,15 +425,35 @@ export class NodeTreeComponent implements OnInit, OnDestroy {
   }
 
   onToggleCompleted(node: Node, isCompleted: boolean): void {
-    // Update the node itself
+    // Update the node itself in state first for immediate UI feedback
     const updated = { ...node, isCompleted };
     this.stateService.updateNode(updated);
 
-    // Cascade completion status to all descendants
+    // Cascade completion status to all descendants in state
     const descendants = this.collectDescendants(node.id);
     descendants.forEach(child => {
       const childUpdated = { ...child, isCompleted };
       this.stateService.updateNode(childUpdated);
+    });
+
+    // Update in backend
+    this.nodeService.updateNode(node.id, updated).subscribe({
+      next: (backendNode) => {
+        // Update state with backend response to ensure consistency
+        this.stateService.updateNode(backendNode);
+      },
+      error: (error) => {
+        console.error('Failed to toggle completed status:', error);
+        // Revert state change on error
+        const revertedNode = { ...node, isCompleted: !isCompleted };
+        this.stateService.updateNode(revertedNode);
+        // Revert descendants too
+        descendants.forEach(child => {
+          const childReverted = { ...child, isCompleted: !isCompleted };
+          this.stateService.updateNode(childReverted);
+        });
+        // Could show user-friendly error message here
+      }
     });
   }
 

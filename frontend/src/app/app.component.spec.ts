@@ -15,16 +15,16 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it(`should have the 'Workflowy Clone' title`, () => {
+  it(`should have the 'NodeFlow' title`, () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.title).toEqual('Workflowy Clone');
+    expect(app.title).toEqual('NodeFlow');
   });
 
   it('should render title', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Workflowy Clone');
+    expect(compiled.querySelector('h1')?.textContent).toContain('NodeFlow');
   });
 });

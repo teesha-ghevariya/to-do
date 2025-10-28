@@ -1,48 +1,237 @@
+/* Workflowy Clone - Node Item Component Styles */
+
 .node-item {
   display: flex;
-  align-items: center;
-  padding: 4px 8px;
-  transition: background-color 0.2s;
+  align-items: flex-start;
+  padding: 6px 0;
+  transition: all 0.2s ease;
+  position: relative;
+  border-radius: 6px;
+  margin: 1px 0;
 }
 
 .node-item:hover {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: #f8f9fa;
 }
 
+.node-content {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 24px;
+}
+
+/* Bullet Styles */
 .bullet {
-  margin-right: 8px;
-  color: #666;
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 24px;
+  margin-right: 10px;
+  cursor: pointer;
   user-select: none;
-  transition: transform 0.2s;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  border-radius: 4px;
 }
 
-.bullet:first-child {
-  cursor: pointer;
+.bullet:hover {
+  background-color: #e8ecf0;
+}
+
+.bullet-icon {
+  font-size: 10px;
+  color: #5a6c7d;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.bullet-dot {
+  font-size: 12px;
+  color: #5a6c7d;
+  font-weight: 600;
+}
+
+.bullet.has-children .bullet-icon {
+  color: #2c3e50;
+}
+
+.bullet.expanded .bullet-icon {
+  transform: rotate(0deg);
+}
+
+.bullet:not(.expanded) .bullet-icon {
+  transform: rotate(-90deg);
+}
+
+/* Input Container */
+.input-container {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .node-input {
   flex: 1;
-  border: 1px solid transparent;
+  border: none;
   outline: none;
   background: transparent;
-  font-size: 16px;
-  padding: 6px 8px;
+  font-size: 15px;
+  font-family: inherit;
+  padding: 6px 10px;
   min-width: 0;
+  color: #2c3e50;
+  line-height: 1.4;
+  transition: all 0.2s ease;
   border-radius: 4px;
-  cursor: text;
+}
+
+.node-input::placeholder {
+  color: #95a5a6;
+  font-style: italic;
 }
 
 .node-input:hover {
-  border-color: rgba(63, 81, 181, 0.2);
-}
-
-.node-input.editing {
-  background-color: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
+  background-color: #f8f9fa;
 }
 
 .node-input:focus {
-  background-color: rgba(63, 81, 181, 0.1);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px #e8ecf0;
+}
+
+.node-input.editing {
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px #d1d9e0;
+}
+
+.node-input.completed {
+  text-decoration: line-through;
+  color: #95a5a6;
+  opacity: 0.8;
+}
+
+/* Tags */
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.tag {
+  background-color: #f8f9fa;
+  color: #5a6c7d;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid #e8ecf0;
+}
+
+.tag:hover {
+  background-color: #e8ecf0;
+  color: #2c3e50;
+}
+
+/* Completion Checkbox */
+.completion-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #d1d9e0;
+  border-radius: 4px;
+  background-color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 10px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.completion-checkbox:hover {
+  border-color: #5a6c7d;
+  background-color: #f8f9fa;
+}
+
+.completion-checkbox.completed {
+  background-color: #2c3e50;
+  border-color: #2c3e50;
+}
+
+.checkmark {
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+/* Focus and Selection States */
+.node-item:focus-within {
+  background-color: #f8f9fa;
+}
+
+.node-item.selected {
+  background-color: #e8ecf0;
+  border-left: 3px solid #2c3e50;
+}
+
+/* Drag and Drop States */
+.node-item[draggable="true"] {
+  cursor: move;
+}
+
+.node-item.dragging {
+  opacity: 0.5;
+  transform: rotate(2deg);
+}
+
+.node-item.drag-over {
+  background-color: rgba(0, 123, 255, 0.1);
+  border: 2px dashed #007bff;
+}
+
+.node-item.drag-over-top {
+  border-top: 3px solid #007bff;
+}
+
+.node-item.drag-over-bottom {
+  border-bottom: 3px solid #007bff;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .node-item { padding: 4px 0; }
+  .node-input { font-size: 16px; }
+  .bullet { width: 24px; height: 28px; }
+  .completion-checkbox { width: 20px; height: 20px; }
+}
+
+/* Animation for new items */
+.node-item.fade-in {
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 

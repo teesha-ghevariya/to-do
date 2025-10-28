@@ -10,14 +10,17 @@ export class StateService {
   private nodesSubject = new BehaviorSubject<Node[]>([]);
   private focusedNodeIdSubject = new BehaviorSubject<number | null>(null);
   private undoStackSubject = new BehaviorSubject<ActionHistory[]>([]);
+  private redoStackSubject = new BehaviorSubject<ActionHistory[]>([]);
 
   nodes$ = this.nodesSubject.asObservable();
   focusedNodeId$ = this.focusedNodeIdSubject.asObservable();
   undoStack$ = this.undoStackSubject.asObservable();
+  redoStack$ = this.redoStackSubject.asObservable();
 
   private nodes: Node[] = [];
   private nodeMap = new Map<number, Node>();
   private undoStack: ActionHistory[] = [];
+  private redoStack: ActionHistory[] = [];
 
   setNodes(nodes: Node[]): void {
     this.nodes = nodes;
@@ -66,12 +69,39 @@ export class StateService {
   addToUndoStack(action: ActionHistory): void {
     this.undoStack.push(action);
     this.undoStackSubject.next([...this.undoStack]);
+    // Clear redo stack when new action is performed
+    this.redoStack = [];
+    this.redoStackSubject.next([]);
   }
 
   popFromUndoStack(): ActionHistory | undefined {
     const action = this.undoStack.pop();
-    this.undoStackSubject.next([...this.undoStack]);
+    if (action) {
+      this.undoStackSubject.next([...this.undoStack]);
+      // Move to redo stack
+      this.redoStack.push(action);
+      this.redoStackSubject.next([...this.redoStack]);
+    }
     return action;
+  }
+
+  popFromRedoStack(): ActionHistory | undefined {
+    const action = this.redoStack.pop();
+    if (action) {
+      this.redoStackSubject.next([...this.redoStack]);
+      // Move to undo stack
+      this.undoStack.push(action);
+      this.undoStackSubject.next([...this.undoStack]);
+    }
+    return action;
+  }
+
+  canUndo(): boolean {
+    return this.undoStack.length > 0;
+  }
+
+  canRedo(): boolean {
+    return this.redoStack.length > 0;
   }
 
   private buildNodeMap(nodes: Node[]): void {

@@ -1,20 +1,215 @@
-<div class="app-container">
-  <h1>To-Do App</h1>
-  <p class="subtitle">Create tasks, edit inline, and use keyboard shortcuts</p>
-  
-  <div class="shortcuts-info">
-    <strong>Shortcuts:</strong> Enter (new task), Tab (indent), Shift+Tab (outdent), 
-    Delete (remove), Ctrl+Up/Down (move), Ctrl+Z (undo)
-  </div>
-  
-  <div *ngIf="isEmpty" class="empty-state">
-    <p>No tasks yet. Start by adding your first task!</p>
-    <button mat-raised-button color="primary" (click)="createFirstNode()">
-      Create First Task
-    </button>
-  </div>
-  
-  <div *ngIf="!isEmpty" class="tree-container">
-    <app-node-tree [parentId]="null" [depth]="0" />
+<div class="workflowy-app">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-content">
+      <h1 class="app-title">Workflowy Clone</h1>
+      
+      <!-- Breadcrumb Navigation -->
+      <div class="breadcrumb" *ngIf="isZoomed">
+        <button class="breadcrumb-item" (click)="zoomToRoot()">
+          All Items
+        </button>
+        <span class="breadcrumb-separator" *ngFor="let item of breadcrumbPath">›</span>
+        <span 
+          *ngFor="let item of breadcrumbPath; let i = index" 
+          class="breadcrumb-item"
+          (click)="onBreadcrumbClick(i)"
+        >
+          {{ item }}
+        </span>
+      </div>
+      
+      <div class="header-actions">
+        <button class="btn btn-secondary" (click)="zoomOut()" *ngIf="isZoomed">
+          Zoom Out
+        </button>
+        <button class="btn btn-secondary" (click)="toggleFocusMode()" [class.active]="focusMode">
+          Focus Mode
+        </button>
+        <button class="btn btn-secondary" (click)="toggleShowCompleted()" [class.active]="!showCompleted">
+          {{ showCompleted ? 'Hide' : 'Show' }} Completed
+        </button>
+        <button class="btn btn-secondary" (click)="toggleSearch()" [class.active]="showSearch">
+          Search
+        </button>
+        
+        <!-- Sync Status Indicator -->
+        <div class="sync-status" *ngIf="pendingCount > 0">
+          <span class="sync-indicator" [class.syncing]="syncStatus === 'syncing'" [class.error]="syncStatus === 'error'">
+            {{ syncStatus === 'syncing' ? 'Saving...' : 'Error' }}
+          </span>
+        </div>
+        
+        <!-- Export/Import Dropdown -->
+        <div class="export-import-dropdown">
+          <button class="btn btn-secondary dropdown-toggle" (click)="showExportMenu = !showExportMenu">
+            Export/Import
+          </button>
+          <div class="dropdown-menu" *ngIf="showExportMenu">
+            <div class="dropdown-section">
+              <h4>Export</h4>
+              <button class="dropdown-item" (click)="exportToJSON(); showExportMenu = false">
+                Export as JSON
+              </button>
+              <button class="dropdown-item" (click)="exportToMarkdown(); showExportMenu = false">
+                Export as Markdown
+              </button>
+              <button class="dropdown-item" (click)="exportToText(); showExportMenu = false">
+                Export as Text
+              </button>
+            </div>
+            <div class="dropdown-section">
+              <h4>Import</h4>
+              <label class="dropdown-item file-input-label">
+                Import from File
+                <input 
+                  type="file" 
+                  accept=".json,.md,.txt" 
+                  (change)="importFromFile($event); showExportMenu = false"
+                  style="display: none;"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Search Bar -->
+    <div class="search-container" *ngIf="showSearch">
+      <input 
+        type="text" 
+        class="search-input" 
+        placeholder="Search your lists..."
+        [(ngModel)]="searchQuery"
+        (input)="onSearch($event)"
+        #searchInput
+      />
+      <button class="search-clear" (click)="clearSearch()" *ngIf="searchQuery">×</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="content-wrapper">
+      <!-- Empty State -->
+      <div *ngIf="isEmpty && !searchQuery" class="empty-state">
+        <div class="empty-content">
+          <h2>Welcome to your personal list</h2>
+          <p>Start by adding your first item. Press Enter to create a new item, Tab to indent, and Shift+Tab to outdent.</p>
+          <button class="btn btn-primary" (click)="createFirstNode()">
+            Add your first item
+          </button>
+        </div>
+      </div>
+      
+      <!-- Search Results -->
+      <app-search-results 
+        *ngIf="showSearch && searchQuery"
+        [results]="searchResults"
+        [searchQuery]="searchQuery"
+        (nodeSelected)="onNodeSelected($event)"
+        (clearSearch)="clearSearch()"
+      />
+      
+      <!-- Tree Container -->
+      <div *ngIf="!isEmpty || searchQuery" class="tree-container">
+        <app-node-tree [parentId]="null" [depth]="0" [focusMode]="focusMode" [showCompleted]="showCompleted" />
+      </div>
+    </div>
+  </main>
+
+  <!-- Notes Panel -->
+  <app-node-notes 
+    *ngIf="showNotes" 
+    [node]="notesNode"
+    (saveNotes)="onNotesSave($event)"
+    (closePanel)="onNotesClose()"
+  />
+
+  <!-- Keyboard Shortcuts Help -->
+  <div class="shortcuts-help" *ngIf="showShortcuts">
+    <div class="shortcuts-content">
+      <h3>Keyboard Shortcuts</h3>
+      <div class="shortcuts-grid">
+        <div class="shortcut-item">
+          <kbd>Enter</kbd>
+          <span>Create new item</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Tab</kbd>
+          <span>Indent item</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Shift + Tab</kbd>
+          <span>Outdent item</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Delete</kbd>
+          <span>Delete empty item</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + Z</kbd>
+          <span>Undo</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + Y</kbd>
+          <span>Redo</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + F</kbd>
+          <span>Search</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + C</kbd>
+          <span>Copy</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + X</kbd>
+          <span>Cut</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + V</kbd>
+          <span>Paste</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + A</kbd>
+          <span>Select all</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + B</kbd>
+          <span>Bold text</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + I</kbd>
+          <span>Italic text</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + Shift + 9</kbd>
+          <span>Toggle notes</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + Shift + 8</kbd>
+          <span>Toggle star</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + =</kbd>
+          <span>Increase font size</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + -</kbd>
+          <span>Decrease font size</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Escape</kbd>
+          <span>Exit zoom/panels</span>
+        </div>
+        <div class="shortcut-item">
+          <kbd>Ctrl + ?</kbd>
+          <span>Show shortcuts</span>
+        </div>
+      </div>
+      <button class="btn btn-secondary" (click)="showShortcuts = false">Close</button>
+    </div>
   </div>
 </div>

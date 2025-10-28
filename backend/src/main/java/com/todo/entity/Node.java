@@ -2,6 +2,8 @@ package com.todo.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "nodes")
@@ -25,6 +27,26 @@ public class Node {
     
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+    
+    @Column(name = "is_completed", nullable = false)
+    private Boolean isCompleted = false;
+    
+    @Column(name = "is_expanded", nullable = false)
+    private Boolean isExpanded = true;
+    
+    @Column(name = "is_starred", nullable = false)
+    private Boolean isStarred = false;
+    
+    @ElementCollection
+    @CollectionTable(name = "node_tags", joinColumns = @JoinColumn(name = "node_id"))
+    @Column(name = "tag")
+    private List<String> tags = new ArrayList<>();
+    
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;
+    
+    @Column(name = "mirror_id")
+    private Long mirrorId;
     
     public Node() {
     }
@@ -93,6 +115,55 @@ public class Node {
     
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+    
+    // New fields getters and setters
+    public Boolean getIsCompleted() {
+        return isCompleted;
+    }
+    
+    public void setIsCompleted(Boolean isCompleted) {
+        this.isCompleted = isCompleted;
+    }
+    
+    public Boolean getIsExpanded() {
+        return isExpanded;
+    }
+    
+    public void setIsExpanded(Boolean isExpanded) {
+        this.isExpanded = isExpanded;
+    }
+    
+    public Boolean getIsStarred() {
+        return isStarred;
+    }
+    
+    public void setIsStarred(Boolean isStarred) {
+        this.isStarred = isStarred;
+    }
+    
+    public List<String> getTags() {
+        return tags;
+    }
+    
+    public void setTags(List<String> tags) {
+        this.tags = tags != null ? tags : new ArrayList<>();
+    }
+    
+    public String getNotes() {
+        return notes;
+    }
+    
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+    
+    public Long getMirrorId() {
+        return mirrorId;
+    }
+    
+    public void setMirrorId(Long mirrorId) {
+        this.mirrorId = mirrorId;
     }
 }
 

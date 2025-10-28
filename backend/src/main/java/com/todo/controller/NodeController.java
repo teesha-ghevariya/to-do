@@ -56,5 +56,39 @@ public class NodeController {
             @RequestParam(required = false) Integer position) {
         return ResponseEntity.ok(nodeService.moveNode(id, parentId, position));
     }
+    
+    // New endpoints for enhanced features
+    @PatchMapping("/{id}/complete")
+    public ResponseEntity<Node> toggleComplete(@PathVariable Long id) {
+        return ResponseEntity.ok(nodeService.toggleComplete(id));
+    }
+    
+    @PatchMapping("/{id}/expand")
+    public ResponseEntity<Node> toggleExpand(@PathVariable Long id) {
+        return ResponseEntity.ok(nodeService.toggleExpand(id));
+    }
+    
+    @PatchMapping("/{id}/star")
+    public ResponseEntity<Node> toggleStar(@PathVariable Long id) {
+        return ResponseEntity.ok(nodeService.toggleStar(id));
+    }
+    
+    @PatchMapping("/{id}/notes")
+    public ResponseEntity<Node> updateNotes(@PathVariable Long id, @RequestBody String notes) {
+        return ResponseEntity.ok(nodeService.updateNotes(id, notes));
+    }
+    
+    @PostMapping("/batch")
+    public ResponseEntity<List<Node>> batchUpdate(@RequestBody List<Node> nodes) {
+        return ResponseEntity.ok(nodeService.batchUpdate(nodes));
+    }
+    
+    @GetMapping("/search")
+    public ResponseEntity<List<Node>> search(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String tag,
+            @RequestParam(required = false) Boolean completed) {
+        return ResponseEntity.ok(nodeService.search(q, tag, completed));
+    }
 }
 

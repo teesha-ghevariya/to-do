@@ -5,6 +5,7 @@ import com.todo.repository.NodeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -120,6 +121,77 @@ public class NodeService {
         
         node.setPosition(newPosition);
         return nodeRepository.save(node);
+    }
+    
+    // New service methods for enhanced features
+    @Transactional
+    public Node toggleComplete(Long id) {
+        Node node = getNodeById(id);
+        node.setIsCompleted(!node.getIsCompleted());
+        return nodeRepository.save(node);
+    }
+    
+    @Transactional
+    public Node toggleExpand(Long id) {
+        Node node = getNodeById(id);
+        node.setIsExpanded(!node.getIsExpanded());
+        return nodeRepository.save(node);
+    }
+    
+    @Transactional
+    public Node toggleStar(Long id) {
+        Node node = getNodeById(id);
+        node.setIsStarred(!node.getIsStarred());
+        return nodeRepository.save(node);
+    }
+    
+    @Transactional
+    public Node updateNotes(Long id, String notes) {
+        Node node = getNodeById(id);
+        node.setNotes(notes);
+        return nodeRepository.save(node);
+    }
+    
+    @Transactional
+    public List<Node> batchUpdate(List<Node> nodes) {
+        for (Node node : nodes) {
+            if (node.getId() != null) {
+                Node existing = getNodeById(node.getId());
+                if (node.getContent() != null) existing.setContent(node.getContent());
+                if (node.getIsCompleted() != null) existing.setIsCompleted(node.getIsCompleted());
+                if (node.getIsExpanded() != null) existing.setIsExpanded(node.getIsExpanded());
+                if (node.getIsStarred() != null) existing.setIsStarred(node.getIsStarred());
+                if (node.getNotes() != null) existing.setNotes(node.getNotes());
+                nodeRepository.save(existing);
+            }
+        }
+        return nodes;
+    }
+    
+    public List<Node> search(String q, String tag, Boolean completed) {
+        List<Node> results = new ArrayList<>();
+        
+        if (q != null && !q.isEmpty()) {
+            results.addAll(nodeRepository.findByContentContaining(q));
+        }
+        if (tag != null && !tag.isEmpty()) {
+            List<Node> tagResults = nodeRepository.findByTagsContaining(tag);
+            if (results.isEmpty()) {
+                results.addAll(tagResults);
+            } else {
+                results.retainAll(tagResults);
+            }
+        }
+        if (completed != null) {
+            List<Node> completedResults = nodeRepository.findByIsCompletedOrderByPositionAsc(completed);
+            if (results.isEmpty()) {
+                results.addAll(completedResults);
+            } else {
+                results.retainAll(completedResults);
+            }
+        }
+        
+        return results.stream().distinct().toList();
     }
 }
 

@@ -7,16 +7,26 @@
       (contentChange)="onContentChange(treeNode.node, $event)"
       (delete)="onDelete(treeNode.node)"
       (createSibling)="onCreateSibling(treeNode.node)"
+      (createChild)="onCreateChild(treeNode.node)"
+      (duplicate)="onDuplicate(treeNode.node)"
       (indent)="onIndent(treeNode.node)"
       (outdent)="onOutdent(treeNode.node)"
       (moveUp)="onMoveUp(treeNode.node)"
       (moveDown)="onMoveDown(treeNode.node)"
+      (toggleExpanded)="onToggleExpanded(treeNode.node)"
+      (zoomIn)="onZoomIn(treeNode.node)"
+      (dragStart)="onDragStart(treeNode.node)"
+      (dragEnd)="onDragEnd()"
+      (dragOver)="onDragOver($event)"
+      (drop)="onDrop($event)"
     />
     
     <app-node-tree
-      *ngIf="treeNode.children && treeNode.children.length > 0"
+      *ngIf="treeNode.children && treeNode.children.length > 0 && treeNode.node.isExpanded !== false"
       [parentId]="treeNode.node.id"
       [depth]="depth + 1"
+      [focusMode]="focusMode"
+      [showCompleted]="showCompleted"
     />
   </div>
 </div>

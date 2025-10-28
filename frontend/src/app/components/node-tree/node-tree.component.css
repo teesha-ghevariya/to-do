@@ -1,8 +1,54 @@
+/* Workflowy Clone - Node Tree Component Styles */
+
 .node-tree {
   width: 100%;
+  font-family: inherit;
 }
 
 .node-wrapper {
   width: 100%;
+}
+
+/* Smooth transitions for expand/collapse */
+.node-tree {
+  transition: all 0.2s ease;
+}
+
+/* Indentation lines */
+.node-tree::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #e0e0e0;
+  opacity: 0.5;
+}
+
+/* Hover effects */
+.node-tree:hover {
+  background-color: rgba(0, 0, 0, 0.01);
+}
+
+/* Focus management */
+.node-tree:focus-within {
+  background-color: rgba(0, 123, 255, 0.02);
+}
+
+/* Animation for tree changes */
+.node-tree.fade-in {
+  animation: treeSlideIn 0.3s ease-out;
+}
+
+@keyframes treeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 

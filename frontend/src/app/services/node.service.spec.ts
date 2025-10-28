@@ -6,52 +6,6 @@ import { Node } from '../models/node.model';
 describe('NodeService', () => {
   let service: NodeService;
   let httpMock: HttpTestingController;
-
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule]
-    });
-    service = TestBed.inject(NodeService);
-    httpMock = TestBed.inject(HttpTestingController);
-  });
-
-  afterEach(() => httpMock.verify());
-
-  it('should fetch root nodes', () => {
-    const mock: Node[] = [{ id: 1, content: 'root', parentId: null, position: 0, createdAt: '', updatedAt: '' }];
-
-    service.getRootNodes().subscribe(nodes => {
-      expect(nodes.length).toBe(1);
-      expect(nodes[0].id).toBe(1);
-    });
-
-    const req = httpMock.expectOne('/api/nodes');
-    expect(req.request.method).toBe('GET');
-    req.flush(mock);
-  });
-
-  it('should create node', () => {
-    const payload: Partial<Node> = { content: 'n', parentId: null, position: 0 };
-    const created: Node = { id: 10, content: 'n', parentId: null, position: 0, createdAt: '', updatedAt: '' };
-
-    service.createNode(payload).subscribe(n => {
-      expect(n.id).toBe(10);
-    });
-
-    const req = httpMock.expectOne('/api/nodes');
-    expect(req.request.method).toBe('POST');
-    req.flush(created);
-  });
-});
-
-import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { NodeService } from './node.service';
-import { Node } from '../models/node.model';
-
-describe('NodeService', () => {
-  let service: NodeService;
-  let httpMock: HttpTestingController;
   let testNode: Node;
 
   beforeEach(() => {

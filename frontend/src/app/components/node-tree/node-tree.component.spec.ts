@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { NodeTreeComponent } from './node-tree.component';
 import { StateService } from '../../services/state.service';
 import { ZoomService } from '../../services/zoom.service';
@@ -22,7 +23,7 @@ describe('NodeTreeComponent', () => {
   beforeEach(async () => {
     state = new MockStateService();
     await TestBed.configureTestingModule({
-      imports: [NodeTreeComponent],
+      imports: [NodeTreeComponent, HttpClientTestingModule],
       providers: [
         { provide: StateService, useValue: state },
         ZoomService,
@@ -48,8 +49,9 @@ describe('NodeTreeComponent', () => {
     const root = state.getAllNodes().find((n: any) => n.id === 1);
     component.onToggleCompleted(root, true);
     const nodes = state.getAllNodes();
+    const updatedRoot = nodes.find((n: any) => n.id === 1);
     const child = nodes.find((n: any) => n.id === 2);
-    expect(root.isCompleted).toBeTrue();
+    expect(updatedRoot.isCompleted).toBeTrue();
     expect(child.isCompleted).toBeTrue();
   });
 });

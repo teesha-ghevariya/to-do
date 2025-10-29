@@ -59,18 +59,16 @@
             <version>5.14.2</version>
             <scope>test</scope>
         </dependency>
-        <!-- ByteBuddy dependencies for Mockito testing -->
+        <!-- ByteBuddy dependencies for Hibernate and Mockito -->
         <dependency>
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
             <version>1.15.10</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy-agent</artifactId>
             <version>1.15.10</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
     
